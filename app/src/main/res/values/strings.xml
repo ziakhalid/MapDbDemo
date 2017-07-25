@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">MapDbDemo</string>
+    <string name="lbl_you_are_at">YOU ARE AT</string>
+    <string name="btn_get_location">GET MY LOCATION</string>
+    <string name="btn_start_location_updates">START LOCATION UPDATES</string>
+    <string name="btn_stop_location_updates">STOP LOCATION UPDATES</string>
+    <string name="EnableLocationPermissionSettings_TEMPLATE">To use current location, you must allow {brand} to access your location.\n\nTo enable, go to settings, tap \"permissions\" and enable location.</string>
+    <string name="go_to_settings">Go to Settings</string>
+    <string name="cancel">Cancel</string>
+    <string name="ok">Ok</string>
+
+</resources>
