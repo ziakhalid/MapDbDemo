@@ -6,8 +6,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
-import org.reactivestreams.Subscription;
-
 import android.Manifest;
 import android.content.ContentValues;
 import android.content.Context;
@@ -32,6 +30,9 @@ import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.annotations.NonNull;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.schedulers.Schedulers;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 
 public class MainActivity extends AppCompatActivity {
@@ -40,15 +41,16 @@ public class MainActivity extends AppCompatActivity {
 	private static final String PREFS_THRESHOLD_VALUE = "location_threshold_value";
 	TextView txtLatLong;
 	public static final String TAG = "MainActivity";
-	SQLiteDatabase db;
+	private NetworkService networkService;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 		txtLatLong = (TextView) findViewById(R.id.txt_lat_long);
+		networkService = ApiUtils.getNetworkService();
 
-		Observable.interval(20,20,TimeUnit.SECONDS)
+		Observable.interval(20, 20, TimeUnit.SECONDS)
 			.subscribeOn(Schedulers.io())
 			.observeOn(AndroidSchedulers.mainThread())
 			.subscribe(new Observer<Long>() {
@@ -61,6 +63,7 @@ public class MainActivity extends AppCompatActivity {
 				public void onNext(@NonNull Long aLong) {
 					Toast.makeText(MainActivity.this, "This happnes every mint :)", Toast.LENGTH_SHORT).show();
 					Log.e("zia", "This happnes every mint :)");
+					sendAllLocationToServer();
 				}
 
 				@Override
@@ -78,7 +81,7 @@ public class MainActivity extends AppCompatActivity {
 		LocationManager locationManager = (LocationManager)
 			getSystemService(Context.LOCATION_SERVICE);
 
-		db = LocationDBHelper.getInstance(MainActivity.this).getWritableDatabase();
+
 		LocationListener locationListener = new MyLocationListener();
 
 		if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
@@ -97,6 +100,42 @@ public class MainActivity extends AppCompatActivity {
 		locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 10, locationListener);
 	}
 
+	private void sendAllLocationToServer() {
+//		http://111.118.178.163/amrs_igl_api/webservice.asmx/tracking?imei=32432423&lat=23.2343196868896&lon=76.2342300415039&accuracy=98.34&dir=we
+
+		List<MLocation> locations = getAllLocation();
+		if (locations != null && locations.size() > 1) {
+			for (int i = 0; i < locations.size(); i++) {
+
+				final MLocation mLocation = locations.get(i);
+				Call<List<MResponse>> call = networkService
+					.sendLocation("32432423", mLocation.getLatitude(), mLocation.getLongitude(), "98.34", "we");
+				call.enqueue(new Callback<List<MResponse>>() {
+					@Override
+					public void onResponse(Call<List<MResponse>> call, Response<List<MResponse>> response) {
+						Log.e("zia", "khalid");
+						if(response != null && response.body().size()>0){
+							if(response.body().get(0).equals("success")){
+								deleteLocation(mLocation);
+							}
+						}
+
+					}
+
+					@Override
+					public void onFailure(Call<List<MResponse>> call, Throwable t) {
+						Log.e("zia", "failed");
+
+					}
+				});
+
+
+			}
+		}
+
+
+	}
+
 	private class MyLocationListener implements LocationListener {
 
 		@Override
@@ -106,9 +145,9 @@ public class MainActivity extends AppCompatActivity {
 				getBaseContext(),
 				"MLocation changed: Lat: " + loc.getLatitude() + " Lng: "
 					+ loc.getLongitude(), Toast.LENGTH_SHORT).show();
-			String longitude = "Longitude: " + loc.getLongitude();
+			String longitude = "" + loc.getLongitude();
 			Log.v(TAG, longitude);
-			String latitude = "Latitude: " + loc.getLatitude();
+			String latitude = "" + loc.getLatitude();
 			Log.v(TAG, latitude);
 
         /*------- To get city name from coordinates -------- */
@@ -145,7 +184,9 @@ public class MainActivity extends AppCompatActivity {
 		}
 	}
 
-	private void putInfoToDb(String latitude, String longitude, String address){
+	private void putInfoToDb(String latitude, String longitude, String address) {
+
+		SQLiteDatabase db = LocationDBHelper.getInstance(MainActivity.this).getWritableDatabase();
 
 		ContentValues values = new ContentValues();
 		values.put(LocationDBHelper.LocationEntry.COLUMN_NAME_LATITUDE, latitude);
@@ -153,10 +194,15 @@ public class MainActivity extends AppCompatActivity {
 		values.put(LocationDBHelper.LocationEntry.COLUMN_NAME_ADDRESS, address);
 
 		long newRowId = db.insert(LocationDBHelper.LocationEntry.TABLE_NAME, null, values);
+		db.close();
 
 	}
 
 	public List<MLocation> getAllLocation() {
+
+		SQLiteDatabase db = LocationDBHelper.getInstance(MainActivity.this).getWritableDatabase();
+
+
 		List<MLocation> mLocationsList = new ArrayList<MLocation>();
 		// Select All Query
 		String selectQuery = "SELECT  * FROM " + LocationDBHelper.LocationEntry.TABLE_NAME;
@@ -176,14 +222,18 @@ public class MainActivity extends AppCompatActivity {
 			} while (cursor.moveToNext());
 		}
 
+		db.close();
 		// return contact list
 		return mLocationsList;
 	}
 
 	public void deleteLocation(MLocation location) {
+
+		SQLiteDatabase db = LocationDBHelper.getInstance(MainActivity.this).getWritableDatabase();
 		db.delete(LocationDBHelper.LocationEntry.TABLE_NAME, LocationDBHelper.LocationEntry._ID + " = ?",
 			new String[] { String.valueOf(location.getId()) });
 		db.close();
 	}
+
 
 }
