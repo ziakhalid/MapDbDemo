@@ -4,6 +4,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.TimeUnit;
+
+import org.reactivestreams.Subscription;
 
 import android.Manifest;
 import android.content.ContentValues;
@@ -23,10 +26,18 @@ import android.util.Log;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import io.reactivex.Observable;
+import io.reactivex.Observer;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.annotations.NonNull;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.schedulers.Schedulers;
+
 
 public class MainActivity extends AppCompatActivity {
 
 
+	private static final String PREFS_THRESHOLD_VALUE = "location_threshold_value";
 	TextView txtLatLong;
 	public static final String TAG = "MainActivity";
 	SQLiteDatabase db;
@@ -37,13 +48,38 @@ public class MainActivity extends AppCompatActivity {
 		setContentView(R.layout.activity_main);
 		txtLatLong = (TextView) findViewById(R.id.txt_lat_long);
 
+		Observable.interval(20,20,TimeUnit.SECONDS)
+			.subscribeOn(Schedulers.io())
+			.observeOn(AndroidSchedulers.mainThread())
+			.subscribe(new Observer<Long>() {
+				@Override
+				public void onSubscribe(@NonNull Disposable d) {
+
+				}
+
+				@Override
+				public void onNext(@NonNull Long aLong) {
+					Toast.makeText(MainActivity.this, "This happnes every mint :)", Toast.LENGTH_SHORT).show();
+					Log.e("zia", "This happnes every mint :)");
+				}
+
+				@Override
+				public void onError(@NonNull Throwable e) {
+
+				}
+
+				@Override
+				public void onComplete() {
+
+				}
+			});
+
+
 		LocationManager locationManager = (LocationManager)
 			getSystemService(Context.LOCATION_SERVICE);
 
 		db = LocationDBHelper.getInstance(MainActivity.this).getWritableDatabase();
 		LocationListener locationListener = new MyLocationListener();
-//		locationManager.requestLocationUpdates(
-//			LocationManager.GPS_PROVIDER, 5000, 10, locationListener);
 
 		if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
 			!= PackageManager.PERMISSION_GRANTED
@@ -144,9 +180,9 @@ public class MainActivity extends AppCompatActivity {
 		return mLocationsList;
 	}
 
-	public void deleteLocation(Location location) {
-		db.delete(LocationDBHelper.LocationEntry.TABLE_NAME, KEY_ID + " = ?",
-			new String[] { String.valueOf(contact.getID()) });
+	public void deleteLocation(MLocation location) {
+		db.delete(LocationDBHelper.LocationEntry.TABLE_NAME, LocationDBHelper.LocationEntry._ID + " = ?",
+			new String[] { String.valueOf(location.getId()) });
 		db.close();
 	}
 
