@@ -81,7 +81,6 @@ public class MainActivity extends AppCompatActivity {
 		LocationManager locationManager = (LocationManager)
 			getSystemService(Context.LOCATION_SERVICE);
 
-
 		LocationListener locationListener = new MyLocationListener();
 
 		if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
@@ -104,7 +103,7 @@ public class MainActivity extends AppCompatActivity {
 //		http://111.118.178.163/amrs_igl_api/webservice.asmx/tracking?imei=32432423&lat=23.2343196868896&lon=76.2342300415039&accuracy=98.34&dir=we
 
 		List<MLocation> locations = getAllLocation();
-		if (locations != null && locations.size() > 1) {
+		if (locations != null && locations.size() >= 1) {
 			for (int i = 0; i < locations.size(); i++) {
 
 				final MLocation mLocation = locations.get(i);
@@ -114,11 +113,12 @@ public class MainActivity extends AppCompatActivity {
 					@Override
 					public void onResponse(Call<List<MResponse>> call, Response<List<MResponse>> response) {
 						Log.e("zia", "khalid");
-						if(response != null && response.body().size()>0){
-							if(response.body().get(0).equals("success")){
+//						if(response != null && response.body().size()>0){
+//							if(response.body().get(0).response.equals("success"))
+//							{
 								deleteLocation(mLocation);
-							}
-						}
+//							}
+//						}
 
 					}
 
@@ -230,7 +230,7 @@ public class MainActivity extends AppCompatActivity {
 	public void deleteLocation(MLocation location) {
 
 		SQLiteDatabase db = LocationDBHelper.getInstance(MainActivity.this).getWritableDatabase();
-		db.delete(LocationDBHelper.LocationEntry.TABLE_NAME, LocationDBHelper.LocationEntry._ID + " = ?",
+		int isDeleted = db.delete(LocationDBHelper.LocationEntry.TABLE_NAME, LocationDBHelper.LocationEntry._ID + " = ?",
 			new String[] { String.valueOf(location.getId()) });
 		db.close();
 	}
